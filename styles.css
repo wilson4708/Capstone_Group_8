@@ -65,7 +65,7 @@ h4{
 
 }
 
-
+/* this styles the confidence levels */
 #label-container div {
     background: rgba(0, 0, 0, 0.7);
     border-radius: 8px;
