@@ -1,134 +1,116 @@
-<!-- Export button -->
-<button id="exportBtn" style="margin-top:16px;">Export to PDF</button>
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PG Scanner</title>
+    <link rel="stylesheet" href="styles.css"/>
+    <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@latest/dist/tf.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@teachablemachine/image@latest/dist/teachablemachine-image.min.js"></script>
+</head>
 
-<!-- jsPDF (for building the PDF) -->
-<script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js"></script>
+<body>
+    <!-- Title at top -->
+    <h1>PG Scanner</h1>
+    
+    <!-- Camera feed area -->
+    <div class="camPlaceHolder" id="webcam-container"></div>
 
-<!-- Add this script block AFTER your script.js include so it can run last -->
-<script>
-  (function () {
-    const pad = (n) => String(n).padStart(2, '0');
-    const timestamp = () => {
-      const d = new Date();
-      return `${d.getFullYear()}${pad(d.getMonth()+1)}${pad(d.getDate())}_${pad(d.getHours())}${pad(d.getMinutes())}${pad(d.getSeconds())}`;
-    };
+    <!-- ✅ Place the button RIGHT BELOW the camera feed -->
+    <button id="exportBtn" class="export">Export to PDF</button>
 
-    // Try to get the current frame as a data URL.
-    async function getSnapshotDataURL() {
-      // Teachable Machine commonly renders to a <canvas> inside #webcam-container
-      let canvas = document.querySelector('#webcam-container canvas');
-      const video = document.querySelector('#webcam-container video');
+    <!-- Confidence Levels section -->
+    <h4>Confidence Levels</h4>
+    <div id="label-container"></div>
 
-      if (canvas) {
-        // Already have a canvas we can export directly
-        try {
-          return canvas.toDataURL('image/jpeg', 0.92);
-        } catch (e) {
-          // fall through to video method if any security/canvas issue
-        }
-      }
+    <!-- Load the camera when the page loads -->
+    <script>
+        window.addEventListener('DOMContentLoaded', () => {
+            init();
+        });
+    </script>
 
-      // Fallback: draw current <video> frame onto a temp canvas
-      if (video && video.videoWidth && video.videoHeight) {
-        const temp = document.createElement('canvas');
-        temp.width = video.videoWidth;
-        temp.height = video.videoHeight;
-        const ctx = temp.getContext('2d');
-        ctx.drawImage(video, 0, 0, temp.width, temp.height);
-        return temp.toDataURL('image/jpeg', 0.92);
-      }
+    <!-- Your model script -->
+    <script src="script.js"></script>
 
-      // If neither exists yet (e.g., model still loading), return null
-      return null;
-    }
+    <!-- jsPDF for PDF export -->
+    <script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js"></script>
 
-    function getConfidenceText() {
-      // Grab label text; this will capture whatever you render there (classes + probabilities)
-      const labelContainer = document.getElementById('label-container');
-      if (!labelContainer) return 'No confidence values available.';
-      // Build a neat list from children if present; otherwise fallback to textContent
-      const lines = [];
-      Array.from(labelContainer.children).forEach((child) => {
-        const t = child.innerText || child.textContent;
-        if (t && t.trim()) lines.push(t.trim());
-      });
-      if (lines.length === 0) {
-        const t = labelContainer.innerText || labelContainer.textContent || '';
-        return t.trim() || 'No confidence values available.';
-      }
-      return lines.join('\n');
-    }
+    <!-- PDF export logic -->
+    <script>
+        (function () {
+            const pad = (n) => String(n).padStart(2, '0');
+            const timestamp = () => {
+                const d = new Date();
+                return `${d.getFullYear()}${pad(d.getMonth()+1)}${pad(d.getDate())}_${pad(d.getHours())}${pad(d.getMinutes())}${pad(d.getSeconds())}`;
+            };
 
-    async function exportToPDF() {
-      const { jsPDF } = window.jspdf;
-      const pdf = new jsPDF({ orientation: 'portrait', unit: 'pt', format: 'a4' });
+            async function getSnapshotDataURL() {
+                let canvas = document.querySelector('#webcam-container canvas');
+                const video = document.querySelector('#webcam-container video');
+                if (canvas) {
+                    try { return canvas.toDataURL('image/jpeg', 0.92); } catch (e) {}
+                }
+                if (video && video.videoWidth && video.videoHeight) {
+                    const temp = document.createElement('canvas');
+                    temp.width = video.videoWidth; temp.height = video.videoHeight;
+                    temp.getContext('2d').drawImage(video, 0, 0, temp.width, temp.height);
+                    return temp.toDataURL('image/jpeg', 0.92);
+                }
+                return null;
+            }
 
-      const pageW = pdf.internal.pageSize.getWidth();
-      const pageH = pdf.internal.pageSize.getHeight();
-      const margin = 36; // 0.5 inch
-      let cursorY = margin;
+            function getConfidenceText() {
+                const c = document.getElementById('label-container');
+                if (!c) return 'No confidence values available.';
+                const lines = Array.from(c.children)
+                    .map(el => (el.innerText || el.textContent || '').trim())
+                    .filter(Boolean);
+                if (lines.length) return lines.join('\n');
+                const t = (c.innerText || c.textContent || '').trim();
+                return t || 'No confidence values available.';
+            }
 
-      // Title
-      pdf.setFont('helvetica', 'bold');
-      pdf.setFontSize(18);
-      pdf.text('PG Scanner Report', margin, cursorY);
-      cursorY += 22;
+            async function exportToPDF() {
+                const { jsPDF } = window.jspdf;
+                const pdf = new jsPDF({ orientation: 'portrait', unit: 'pt', format: 'a4' });
+                const pageW = pdf.internal.pageSize.getWidth();
+                const pageH = pdf.internal.pageSize.getHeight();
+                const margin = 36;
+                let y = margin;
 
-      // Timestamp
-      pdf.setFont('helvetica', 'normal');
-      pdf.setFontSize(11);
-      pdf.text(`Generated: ${new Date().toLocaleString()}`, margin, cursorY);
-      cursorY += 16;
+                pdf.setFont('helvetica', 'bold'); pdf.setFontSize(18);
+                pdf.text('PG Scanner Report', margin, y); y += 22;
 
-      // Snapshot
-      const imgData = await getSnapshotDataURL();
-      if (imgData) {
-        // Fit the image to the page width minus margins, keep aspect ratio
-        const img = new Image();
-        img.src = imgData;
-        await new Promise((res) => (img.onload = res));
+                pdf.setFont('helvetica', 'normal'); pdf.setFontSize(11);
+                pdf.text(`Generated: ${new Date().toLocaleString()}`, margin, y); y += 16;
 
-        const maxW = pageW - margin * 2;
-        const scale = maxW / img.width;
-        const drawW = maxW;
-        const drawH = img.height * scale;
+                const imgData = await getSnapshotDataURL();
+                if (imgData) {
+                    const img = new Image(); img.src = imgData; await new Promise(r => img.onload = r);
+                    const maxW = pageW - margin*2; const scale = maxW / img.width;
+                    const drawW = maxW; const drawH = img.height * scale;
+                    pdf.addImage(imgData, 'JPEG', margin, y, drawW, drawH); y += drawH + 18;
+                } else {
+                    pdf.setTextColor(200,0,0); pdf.text('Snapshot unavailable (camera not ready).', margin, y);
+                    pdf.setTextColor(0,0,0); y += 18;
+                }
 
-        pdf.addImage(imgData, 'JPEG', margin, cursorY, drawW, drawH);
-        cursorY += drawH + 18;
-      } else {
-        pdf.setTextColor(200, 0, 0);
-        pdf.text('Snapshot unavailable (camera not ready).', margin, cursorY);
-        pdf.setTextColor(0, 0, 0);
-        cursorY += 18;
-      }
+                pdf.setFont('helvetica', 'bold'); pdf.setFontSize(14);
+                pdf.text('Confidence Levels', margin, y); y += 16;
 
-      // Confidence section
-      pdf.setFont('helvetica', 'bold');
-      pdf.setFontSize(14);
-      pdf.text('Confidence Levels', margin, cursorY);
-      cursorY += 16;
+                pdf.setFont('helvetica', 'normal'); pdf.setFontSize(12);
+                const wrapped = pdf.splitTextToSize(getConfidenceText(), pageW - margin*2);
+                if (y + wrapped.length * 14 > pageH - margin) { pdf.addPage(); y = margin; }
+                pdf.text(wrapped, margin, y);
 
-      pdf.setFont('helvetica', 'normal');
-      pdf.setFontSize(12);
+                pdf.save(`PG-Scan_${timestamp()}.pdf`);
+            }
 
-      const confText = getConfidenceText();
-      const wrapped = pdf.splitTextToSize(confText, pageW - margin * 2);
-
-      // Add new page if needed
-      if (cursorY + wrapped.length * 14 > pageH - margin) {
-        pdf.addPage();
-        cursorY = margin;
-      }
-      pdf.text(wrapped, margin, cursorY);
-
-      // Save
-      pdf.save(`PG-Scan_${timestamp()}.pdf`);
-    }
-
-    // Wire up the button
-    window.addEventListener('DOMContentLoaded', () => {
-      const btn = document.getElementById('exportBtn');
-      if (btn) btn.addEventListener('click', exportToPDF);
-    });
-  })();
-</script>
+            window.addEventListener('DOMContentLoaded', () => {
+                document.getElementById('exportBtn').addEventListener('click', exportToPDF);
+            });
+        })();
+    </script>
+</body>
+</html>
