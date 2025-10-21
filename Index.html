@@ -14,10 +14,10 @@
   <body>
     <h1>PG Scanner</h1>
 
+    <h4 id ="text">Confidence Levels</h4>
+
     <!-- Container where the webcam feed will be displayed -->
     <div class="camPlaceHolder" id="webcam-container"></div>
-
-    <h4>Confidence Levels</h4>
 
     <!-- Container to display confidence levels of predictions -->
     <div id="label-container"></div>
@@ -35,6 +35,9 @@
     <style> 
       #PDFbtn {
         display: none; /* Initially Hidden */
+      }
+      #text {
+        display: none;
       }
     </style>
 
@@ -54,7 +57,11 @@
     // CLick event listner to StartCambtn
     StartCamBtn.addEventListener('click', () => {
       PDFbtn.style.display = 'inline-block';
-    })
+    });
+
+    StartCamBtn.addEventListener('click', () => {
+      document.getElementById('text').style.display = 'inline-block';
+    });
     </script>
         Start Camera Feed
       </button>
