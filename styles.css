@@ -13,7 +13,14 @@ body {
   min-height: 100vh;
   padding: 20px 10px;
   align-items: center;
-}
+  background-image: url("Grey-Background.jpeg");
+      /* or .jpeg */
+  background-position: center;
+  background-size: cover;
+  background-repeat: no-repeat;
+      /* fallback */
+  }
+
 
 h1 {
   padding: 20px 0;
