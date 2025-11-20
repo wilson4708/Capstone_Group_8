@@ -21,10 +21,7 @@ A web-based medical scanning application that uses machine learning to assist he
 - [Security Features](#security-features)
 - [Architecture](#architecture)
 - [Development](#development)
-- [Future Enhancements](#future-enhancements)
 - [Disclaimer](#disclaimer)
-- [Contributing](#contributing)
-- [License](#license)
 
 ---
 
