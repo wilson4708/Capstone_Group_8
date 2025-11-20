@@ -16,8 +16,8 @@ const CONFIG = {
   // Prediction update interval (milliseconds)
   UPDATE_INTERVAL: 1250,
 
-  // External model URL (Teachable Machine hosted)
-  MODEL_URL: "https://teachablemachine.withgoogle.com/models/efDaJaMeI/",
+  // path to model files
+  MODEL_URL: "./",
 
   // Minimum confidence threshold to display (percentage)
   CONFIDENCE_THRESHOLD: 5,
