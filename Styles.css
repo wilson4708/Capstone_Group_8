@@ -223,6 +223,7 @@ h4 {
 
 #webcam-container video {
   transform: none;
+  max-width: 100%;
 }
 
 #label-container {
