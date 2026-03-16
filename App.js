@@ -338,14 +338,12 @@ backBtn.addEventListener("click", () => {
   // Signal the prediction loop to stop
   isRunning = false;
 
-  // Stop the video stream if it was running in webcam mode
-  if (typeof videoElement !== "undefined" && videoElement) {
+  // Stop and clear webcam if it was running in webcam mode
+  if (typeof webcam !== "undefined" && webcam) {
     try {
-      videoElement.srcObject?.getTracks().forEach((t) => t.stop());
-      videoElement.srcObject = null;
-      videoElement = null;
+      webcam.stop();
     } catch (e) {
-      console.log("Video stream already stopped or not initialized");
+      console.log("Webcam already stopped or not initialized");
     }
   }
 
