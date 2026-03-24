@@ -182,6 +182,7 @@ async function predict() {
 }
 
 function checkLighting() {
+  if (!webcam) return; // Not in webcam mode (uploaded image)
   const canvas = webcam.canvas;
   if (!canvas) return;
 
