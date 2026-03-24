@@ -17,7 +17,7 @@ const CONFIG = {
   UPDATE_INTERVAL: 1250,
 
   // path to model files
-  MODEL_URL: "./",
+  MODEL_URL: "./ModelFiles/",
 
   // Minimum confidence threshold to display (percentage)
   CONFIDENCE_THRESHOLD: 5,
@@ -72,7 +72,6 @@ async function init() {
     } else {
       // Use webcam mode (original behavior)
       useUploadedImage = false;
-      const flip = true;
       webcam = new tmImage.Webcam();
       await webcam.setup(); // Request camera permissions
       await webcam.play();
