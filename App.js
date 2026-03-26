@@ -422,7 +422,7 @@ function displayRecords(patients) {
     return;
   }
 
-  let html = "<table class='records-table'>";
+  let html = "<div class='table-wrapper'><table class='records-table'>";
   html += "<thead><tr><th>ID</th><th>Name</th><th>Age</th><th>Sex</th><th>Date</th><th>Actions</th></tr></thead>";
   html += "<tbody>";
 
@@ -444,7 +444,7 @@ function displayRecords(patients) {
     </tr>`;
   });
 
-  html += "</tbody></table>";
+  html += "</tbody></table></div>";
   recordsList.innerHTML = html;
 }
 

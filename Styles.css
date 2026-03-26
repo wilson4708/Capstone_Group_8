@@ -371,6 +371,12 @@ h4 {
 }
 
 /* Records Table */
+.table-wrapper {
+  width: 100%;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
 .records-table {
   width: 100%;
   border-collapse: collapse;
@@ -494,12 +500,34 @@ h4 {
   }
 
   .records-table {
-    font-size: 12px;
+    font-size: 11px;
+    min-width: unset;
   }
 
   .records-table th,
   .records-table td {
-    padding: 8px;
+    padding: 6px 5px;
+  }
+
+  /* Hide ID column on mobile to save space */
+  .records-table th:first-child,
+  .records-table td:first-child {
+    display: none;
+  }
+
+  /* Stack action buttons vertically in their cell */
+  .records-table td:last-child {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    padding: 6px 4px;
+  }
+
+  .records-table button {
+    font-size: 0.72rem;
+    padding: 5px 6px;
+    margin: 0;
+    width: 100%;
   }
 
   .search-container {
