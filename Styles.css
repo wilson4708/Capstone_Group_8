@@ -220,9 +220,6 @@ h4 {
   box-shadow: 0 6px 16px rgba(0, 0, 0, 0.7);
 }
 
-#webcam-container canvas {
-  transform: scaleX(-1);
-}
 
 #label-container {
   margin-top: 20px;

@@ -328,7 +328,12 @@ StartCamBtn.addEventListener("click", async () => {
   }
 });
 
-takePhotoBtn.addEventListener("click", captureAndPredict);
+takePhotoBtn.addEventListener("click", async () => {
+  await captureAndPredict();
+  // Reveal export/navigation buttons only after the first photo is taken
+  PDFbtn.style.display = "block";
+  backBtn.style.display = "block";
+});
 
 // ========== Back Button Handler ==========
 

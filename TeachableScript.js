@@ -141,6 +141,8 @@ async function startWebcam() {
   const canvas = document.createElement("canvas");
   canvas.width = 400;
   canvas.height = 400;
+  // Mirror front camera so it looks natural; back camera should not be mirrored
+  canvas.style.transform = currentFacingMode === "user" ? "scaleX(-1)" : "";
   container.appendChild(canvas);
 
   // Proxy object that matches the tmImage.Webcam interface used elsewhere
