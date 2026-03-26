@@ -127,6 +127,11 @@ const timestamp = () => {
  * @returns {string|null} Data URL of snapshot, or null if unavailable
  */
 async function getSnapshotDataURL() {
+  // Use the frozen frame captured at scan time so the PDF always matches the analyzed image
+  if (window.scannedFrameData) {
+    return window.scannedFrameData;
+  }
+
   // Check for uploaded image first
   const uploadedImg = document.querySelector("#webcam-container img");
   if (uploadedImg && uploadedImg.src) {

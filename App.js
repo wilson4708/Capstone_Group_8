@@ -1,13 +1,12 @@
 /**
- * App.js - PG Scanner Main Application Logic - FIXED PASSWORD VERIFICATION
+ * App.js - PG Scanner Application Logic
  *
  * Handles:
- * - Encryption setup and initialization with verification token
- * - Proper password verification on load
- * - Patient form validation
- * - Camera initialization
- * - Patient record management (CRUD operations)
- * - model interactions
+ * - Encryption setup and password verification
+ * - Patient form validation and state
+ * - Camera initialization and teardown
+ * - Patient record management (CRUD)
+ * - Modal interactions
  * - Database integration
  */
 
@@ -16,19 +15,18 @@ const StartCamBtn = document.getElementById("StartCamBtn");
 const PDFbtn = document.getElementById("PDFbtn");
 const backBtn = document.getElementById("back-btn");
 const textElement = document.getElementById("text");
-const patientForm = document.getElementById("patient-form");
 const patientFormContainer = document.getElementById("patient-form-container");
 const takePhotoBtn = document.getElementById("TakePhotoBtn");
 const viewRecordsBtn = document.getElementById("view-records-btn");
-const recordsmodel = document.getElementById("records-model");
-const closemodel = document.querySelector(".close");
+const recordsModal = document.getElementById("records-model");
+const closeModal = document.querySelector(".close");
 const searchInput = document.getElementById("search-input");
 const searchBtn = document.getElementById("search-btn");
 const showAllBtn = document.getElementById("show-all-btn");
 const recordsList = document.getElementById("records-list");
 
-// Encryption model elements
-const encryptionmodel = document.getElementById("encryption-model");
+// Encryption modal elements
+const encryptionModal = document.getElementById("encryption-model");
 const setupEncryptionBtn = document.getElementById("setup-encryption-btn");
 const masterPasswordInput = document.getElementById("master-password");
 const confirmPasswordInput = document.getElementById("confirm-password");
@@ -36,41 +34,29 @@ const encryptionError = document.getElementById("encryption-error");
 
 // Image upload elements
 const patientImageInput = document.getElementById("patient-image");
-const imagePreviewContainer = document.getElementById(
-  "image-preview-container",
-);
+const imagePreviewContainer = document.getElementById("image-preview-container");
 const imagePreview = document.getElementById("image-preview");
 const removeImageBtn = document.getElementById("remove-image-btn");
 
 // ========== Application State ==========
 let currentPatientData = null;
-let uploadedImageData = null; // Stores base64 data URL of uploaded image
+let uploadedImageData = null;
 
 // ========== Encryption & Database Initialization ==========
 
-/**
- * Initialize encryption and database on page load
- */
 window.addEventListener("load", async () => {
-  console.log("Page fully loaded");
-  console.log("init function available:", typeof init !== "undefined");
-
-  // Check if encryption is already set up
   const hasEncryption = localStorage.getItem("encryption_salt");
 
   if (!hasEncryption) {
-    // First time - show encryption setup model
-    console.log("First time setup - showing encryption model");
-    encryptionmodel.style.display = "block";
+    encryptionModal.style.display = "block";
   } else {
-    // Returning user - ask for password with verification
     await promptForPassword();
   }
 });
 
 /**
- * Prompt user for master password to unlock application
- * NOW WITH PROPER PASSWORD VERIFICATION USING A TEST TOKEN!
+ * Prompts the user for their master password and verifies it against
+ * the stored verification token. Allows up to 3 attempts.
  */
 async function promptForPassword() {
   let attempts = 0;
@@ -80,7 +66,7 @@ async function promptForPassword() {
     const password = prompt(
       attempts === 0
         ? "Enter master password to unlock application:"
-        : `Incorrect password. Attempt ${attempts + 1}/${maxAttempts}:`,
+        : `Incorrect password. Attempt ${attempts + 1}/${maxAttempts}:`
     );
 
     if (!password) {
@@ -90,75 +76,51 @@ async function promptForPassword() {
     }
 
     try {
-      // Step 1: Initialize encryption with the password
       await encryption.init(password);
-      console.log("Encryption key generated from password");
 
-      // Step 2: CRITICAL - Verify password by decrypting the stored verification token
       const verificationToken = localStorage.getItem("encryption_verification");
-
       if (!verificationToken) {
-        console.error(
-          "No verification token found! Encryption was not set up properly.",
-        );
-        alert(
-          "Security error: Verification token missing. Please clear browser data and set up again.",
-        );
+        alert("Security error: Verification token missing. Please clear browser data and set up again.");
         localStorage.removeItem("encryption_salt");
         location.reload();
         return;
       }
 
-      // Try to decrypt the verification token
       const decryptedToken = await encryption.decrypt(verificationToken);
-
-      // Check if the decrypted token matches our expected value
       if (decryptedToken.verify === "PG_SCANNER_AUTH_TOKEN") {
-        console.log(" Password verified successfully!");
-
-        // Step 3: Initialize database after successful verification
         await patientDB.init();
-        console.log("Database initialized");
-
-        return; // Exit function - user is authenticated
+        return;
       } else {
         throw new Error("Verification token mismatch");
       }
     } catch (error) {
       console.error("Password verification failed:", error);
       attempts++;
-
-      // Reset encryption key on failed attempt
       encryption.key = null;
 
       if (attempts >= maxAttempts) {
-        alert(
-          "Too many failed attempts.\n\nPlease refresh the page and try again.",
-        );
+        alert("Too many failed attempts.\n\nPlease refresh the page and try again.");
         location.reload();
         return;
       }
-      // Loop will continue for another attempt
     }
   }
 }
 
 /**
- * Handle encryption setup for first-time users
- * NOW CREATES A VERIFICATION TOKEN!
+ * Handles first-time encryption setup. Creates and stores a verification
+ * token so the password can be checked on future logins.
  */
 setupEncryptionBtn.addEventListener("click", async () => {
   const password = masterPasswordInput.value;
   const confirm = confirmPasswordInput.value;
 
-  // Validate password length
   if (!password || password.length < 8) {
     encryptionError.textContent = "Password must be at least 8 characters";
     encryptionError.style.display = "block";
     return;
   }
 
-  // Validate password match
   if (password !== confirm) {
     encryptionError.textContent = "Passwords do not match";
     encryptionError.style.display = "block";
@@ -166,29 +128,18 @@ setupEncryptionBtn.addEventListener("click", async () => {
   }
 
   try {
-    // Initialize encryption with master password
     await encryption.init(password);
-    console.log("Encryption initialized successfully");
 
-    // CRITICAL: Create and store a verification token
-    const verificationData = {
+    const encryptedToken = await encryption.encrypt({
       verify: "PG_SCANNER_AUTH_TOKEN",
       created: new Date().toISOString(),
-    };
-
-    const encryptedToken = await encryption.encrypt(verificationData);
+    });
     localStorage.setItem("encryption_verification", encryptedToken);
-    console.log("Verification token created and stored");
 
-    // Initialize database
     await patientDB.init();
-    console.log("Patient database initialized");
 
-    // Hide model and show success message
-    encryptionmodel.style.display = "none";
-    alert(
-      "Encryption setup successful!\n\nIMPORTANT: Remember your password - it cannot be recovered!",
-    );
+    encryptionModal.style.display = "none";
+    alert("Encryption setup successful!\n\nIMPORTANT: Remember your password - it cannot be recovered!");
   } catch (error) {
     console.error("Encryption setup error:", error);
     encryptionError.textContent = "Setup failed: " + error.message;
@@ -198,57 +149,47 @@ setupEncryptionBtn.addEventListener("click", async () => {
 
 // ========== Image Upload Handling ==========
 
-/**
- * Handle image file selection and preview
- */
 patientImageInput.addEventListener("change", (event) => {
   const file = event.target.files[0];
+  if (!file) return;
 
-  if (file) {
-    if (!file.type.startsWith("image/")) {
-      alert("Please select a valid image file.");
-      patientImageInput.value = "";
-      return;
-    }
-
-    const maxSize = 5 * 1024 * 1024;
-    if (file.size > maxSize) {
-      alert("Image file is too large. Please select an image under 5MB.");
-      patientImageInput.value = "";
-      return;
-    }
-
-    const reader = new FileReader();
-    reader.onload = (e) => {
-      uploadedImageData = e.target.result;
-      imagePreview.src = uploadedImageData;
-      imagePreviewContainer.style.display = "block";
-      console.log("Image uploaded and previewed successfully");
-    };
-    reader.onerror = () => {
-      alert("Failed to read image file. Please try again.");
-      patientImageInput.value = "";
-    };
-    reader.readAsDataURL(file);
+  if (!file.type.startsWith("image/")) {
+    alert("Please select a valid image file.");
+    patientImageInput.value = "";
+    return;
   }
+
+  if (file.size > 5 * 1024 * 1024) {
+    alert("Image file is too large. Please select an image under 5MB.");
+    patientImageInput.value = "";
+    return;
+  }
+
+  const reader = new FileReader();
+  reader.onload = (e) => {
+    uploadedImageData = e.target.result;
+    imagePreview.src = uploadedImageData;
+    imagePreviewContainer.style.display = "block";
+  };
+  reader.onerror = () => {
+    alert("Failed to read image file. Please try again.");
+    patientImageInput.value = "";
+  };
+  reader.readAsDataURL(file);
 });
 
-/**
- * Handle image removal
- */
 removeImageBtn.addEventListener("click", () => {
   uploadedImageData = null;
   patientImageInput.value = "";
   imagePreview.src = "";
   imagePreviewContainer.style.display = "none";
-  console.log("Uploaded image removed");
 });
 
 // ========== Form Validation ==========
 
 /**
- * Validates patient form inputs before camera activation
- * @returns {boolean} True if all required fields are valid
+ * Validates required patient form fields before starting a scan.
+ * @returns {boolean} True if all fields are valid
  */
 function validatePatientForm() {
   const name = document.getElementById("patient-name").value.trim();
@@ -272,20 +213,13 @@ function validatePatientForm() {
 
 // ========== Camera Initialization ==========
 
-/**
- * Start Camera button event handler
- */
 StartCamBtn.addEventListener("click", async () => {
-  console.log("Start Camera button clicked");
-
   if (!encryption.isInitialized()) {
     alert("Encryption not initialized. Please refresh the page.");
     return;
   }
 
-  if (!validatePatientForm()) {
-    return;
-  }
+  if (!validatePatientForm()) return;
 
   currentPatientData = {
     name: document.getElementById("patient-name").value.trim(),
@@ -295,82 +229,80 @@ StartCamBtn.addEventListener("click", async () => {
     uploadedImage: uploadedImageData,
   };
 
-  console.log("Patient data captured:", currentPatientData);
-
   window.uploadedImageData = uploadedImageData;
 
   StartCamBtn.disabled = true;
   StartCamBtn.textContent = "Loading...";
 
   try {
-    console.log("Calling init() function...");
     await init();
-    console.log("Camera initialized successfully");
 
     StartCamBtn.style.display = "none";
     textElement.style.display = "block";
     patientFormContainer.style.display = "none";
 
     if (!window.uploadedImageData) {
-      // Webcam mode: show Take Photo button, hold off on PDF/back until a photo is taken
+      // Webcam mode: hold PDF/back until the user takes a photo
       takePhotoBtn.style.display = "inline-block";
     } else {
-      // Uploaded image mode: prediction already ran in init(), show all buttons now
+      // Uploaded image mode: prediction already ran, show all buttons
       PDFbtn.style.display = "block";
       backBtn.style.display = "block";
     }
   } catch (error) {
     console.error("Failed to start camera:", error);
-    alert(
-      "Failed to start camera. Please check permissions and try again.\n\nError: " +
-        error.message,
-    );
+    alert("Failed to start camera. Please check permissions and try again.\n\nError: " + error.message);
     StartCamBtn.disabled = false;
-    StartCamBtn.textContent = "Start Camera Feed";
+    StartCamBtn.textContent = "Start Scan";
   }
 });
 
 takePhotoBtn.addEventListener("click", async () => {
+  // Freeze the current frame before anything else so the PDF always matches the scan
+  if (webcam?.canvas) {
+    window.scannedFrameData = webcam.canvas.toDataURL("image/jpeg", 0.92);
+  }
+
   await captureAndPredict();
-  // Reveal export/navigation buttons only after the first photo is taken
-  PDFbtn.style.display = "block";
+  await exportToPDFWithPatient();
+
+  // Freeze the preview — stop the loop and release the camera stream
+  isRunning = false;
+  if (webcam?._videoEl?.srcObject) {
+    webcam._videoEl.srcObject.getTracks().forEach((t) => t.stop());
+  }
+
+  takePhotoBtn.style.display = "none";
+  document.getElementById("FlipCamBtn").style.display = "none";
   backBtn.style.display = "block";
 });
 
-// ========== Back Button Handler ==========
+// ========== Back Button ==========
 
-/**
- * Handle back button click to return to patient form
- */
 backBtn.addEventListener("click", () => {
-  // Stop the prediction loop first
   isRunning = false;
 
-  // Stop and clear webcam if running
-  if (typeof webcam !== "undefined" && webcam) {
-    try {
-      webcam.stop();
-    } catch (e) {
-      console.log("Webcam already stopped or not initialized");
-    }
+  // Stop the active camera stream
+  if (webcam && webcam._videoEl) {
+    const stream = webcam._videoEl.srcObject;
+    if (stream) stream.getTracks().forEach((t) => t.stop());
   }
 
-  // Wait for any in-flight predict() calls to finish before clearing
+  // Brief delay lets any in-flight predict() call finish before clearing the UI
   setTimeout(() => {
     document.getElementById("label-container").innerHTML = "";
     document.getElementById("lighting-container").innerHTML = "";
   }, 100);
 
-  // Clear webcam container
-  const webcamContainer = document.getElementById("webcam-container");
-  webcamContainer.innerHTML = "";
+  document.getElementById("webcam-container").innerHTML = "";
 
-  // Reset application state
+  // Reset state
   currentPatientData = null;
   uploadedImageData = null;
   window.uploadedImageData = null;
+  window.scannedFrameData = null;
 
-  // Reset form fields
+  // Reset form
   document.getElementById("patient-name").value = "";
   document.getElementById("patient-age").value = "";
   document.getElementById("patient-sex").value = "";
@@ -379,23 +311,22 @@ backBtn.addEventListener("click", () => {
   imagePreview.src = "";
   imagePreviewContainer.style.display = "none";
 
-  // Update UI
+  // Reset UI
   patientFormContainer.style.display = "block";
   StartCamBtn.style.display = "block";
   StartCamBtn.disabled = false;
-  StartCamBtn.textContent = "Start Camera Feed";
+  StartCamBtn.textContent = "Start Scan";
   takePhotoBtn.style.display = "none";
+  document.getElementById("FlipCamBtn").style.display = "none";
   PDFbtn.style.display = "none";
   backBtn.style.display = "none";
   textElement.style.display = "none";
-
-  console.log("Returned to patient form - ready for new patient");
 });
 
-// ========== PDF Export with Database Save ==========
+// ========== PDF Export ==========
 
 /**
- * Exports current scan to PDF and saves patient record to database
+ * Exports the current scan to PDF and saves the patient record to the database.
  */
 async function exportToPDFWithPatient() {
   if (!currentPatientData) {
@@ -410,47 +341,39 @@ async function exportToPDFWithPatient() {
 
   try {
     const { filename, pdfBlob } = await exportToPDF();
-
     currentPatientData.pdfFilename = filename;
     currentPatientData.pdfBlob = pdfBlob;
 
     const patientId = await patientDB.addPatient(currentPatientData);
-
-    alert(
-      `Patient record saved successfully!\n\nRecord ID: ${patientId}\nData encrypted and stored securely.`,
-    );
+    alert(`Patient record saved successfully!\n\nRecord ID: ${patientId}\nData encrypted and stored securely.`);
   } catch (error) {
     console.error("Error saving patient record:", error);
-    alert(
-      "PDF exported but failed to save patient record.\n\nError: " +
-        error.message,
-    );
+    alert("PDF exported but failed to save patient record.\n\nError: " + error.message);
   }
 }
 
-// ========== Records model Management ==========
+// ========== Records Modal ==========
 
 viewRecordsBtn.addEventListener("click", () => {
   if (!encryption.isInitialized()) {
     alert("Encryption not initialized. Please refresh the page.");
     return;
   }
-
-  recordsmodel.style.display = "block";
+  recordsModal.style.display = "block";
   loadAllRecords();
 });
 
-closemodel.addEventListener("click", () => {
-  recordsmodel.style.display = "none";
+closeModal.addEventListener("click", () => {
+  recordsModal.style.display = "none";
 });
 
 window.addEventListener("click", (event) => {
-  if (event.target === recordsmodel) {
-    recordsmodel.style.display = "none";
+  if (event.target === recordsModal) {
+    recordsModal.style.display = "none";
   }
 });
 
-// ========== Search Functionality ==========
+// ========== Search ==========
 
 searchBtn.addEventListener("click", async () => {
   const searchTerm = searchInput.value.trim();
@@ -470,9 +393,7 @@ showAllBtn.addEventListener("click", () => {
 });
 
 searchInput.addEventListener("keypress", (e) => {
-  if (e.key === "Enter") {
-    searchBtn.click();
-  }
+  if (e.key === "Enter") searchBtn.click();
 });
 
 // ========== Database Operations ==========
@@ -483,8 +404,7 @@ async function loadAllRecords() {
     displayRecords(patients);
   } catch (error) {
     console.error("Error loading records:", error);
-    recordsList.innerHTML =
-      "<p>Error loading records. Please check your password and try again.</p>";
+    recordsList.innerHTML = "<p>Error loading records. Please check your password and try again.</p>";
   }
 }
 
@@ -495,8 +415,7 @@ function displayRecords(patients) {
   }
 
   let html = "<table class='records-table'>";
-  html +=
-    "<thead><tr><th>ID</th><th>Name</th><th>Age</th><th>Sex</th><th>Date</th><th>Actions</th></tr></thead>";
+  html += "<thead><tr><th>ID</th><th>Name</th><th>Age</th><th>Sex</th><th>Date</th><th>Actions</th></tr></thead>";
   html += "<tbody>";
 
   patients.forEach((patient) => {
@@ -511,11 +430,7 @@ function displayRecords(patients) {
       <td>${date}</td>
       <td>
         <button onclick="viewPatientDetails(${patient.id})">View</button>
-        ${
-          showPdfButton
-            ? `<button onclick="downloadPatientPDF(${patient.id})">Download PDF</button>`
-            : ""
-        }
+        ${showPdfButton ? `<button onclick="downloadPatientPDF(${patient.id})">Download PDF</button>` : ""}
         <button onclick="deletePatientRecord(${patient.id})">Delete</button>
       </td>
     </tr>`;
@@ -537,13 +452,13 @@ async function viewPatientDetails(id) {
 
       alert(
         `Patient Details:\n\n` +
-          `Name: ${patient.name}\n` +
-          `Age: ${patient.age}\n` +
-          `Sex: ${patient.sex}\n` +
-          `Notes: ${patient.notes || "None"}\n` +
-          `${pdfInfo}\n` +
-          `Created: ${new Date(patient.createdAt).toLocaleString()}\n\n` +
-          `This data is encrypted in storage.`,
+        `Name: ${patient.name}\n` +
+        `Age: ${patient.age}\n` +
+        `Sex: ${patient.sex}\n` +
+        `Notes: ${patient.notes || "None"}\n` +
+        `${pdfInfo}\n` +
+        `Created: ${new Date(patient.createdAt).toLocaleString()}\n\n` +
+        `This data is encrypted in storage.`
       );
     }
   } catch (error) {
@@ -562,32 +477,22 @@ async function downloadPatientPDF(id) {
     }
 
     if (!patient.pdfBlob) {
-      alert(
-        "PDF file not available. The PDF may have been generated before this feature was added.",
-      );
+      alert("PDF file not available. The PDF may have been generated before this feature was added.");
       return;
     }
 
-    let blob;
-    if (patient.pdfBlob instanceof Blob) {
-      blob = patient.pdfBlob;
-    } else {
-      console.log("Reconstructing blob from stored data");
-      blob = new Blob([patient.pdfBlob], { type: "application/pdf" });
-    }
+    const blob = patient.pdfBlob instanceof Blob
+      ? patient.pdfBlob
+      : new Blob([patient.pdfBlob], { type: "application/pdf" });
 
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
     a.href = url;
-    a.download =
-      patient.pdfFilename ||
-      `Patient_${patient.id}_${patient.name.replace(/\s+/g, "_")}_Report.pdf`;
+    a.download = patient.pdfFilename || `Patient_${patient.id}_${patient.name.replace(/\s+/g, "_")}_Report.pdf`;
     document.body.appendChild(a);
     a.click();
     document.body.removeChild(a);
     URL.revokeObjectURL(url);
-
-    console.log(`PDF downloaded successfully: ${a.download}`);
   } catch (error) {
     console.error("Error downloading PDF:", error);
     alert(`Failed to download PDF: ${error.message}`);
@@ -595,11 +500,7 @@ async function downloadPatientPDF(id) {
 }
 
 async function deletePatientRecord(id) {
-  if (
-    confirm(
-      "Are you sure you want to delete this patient record?\n\nThis action cannot be undone.",
-    )
-  ) {
+  if (confirm("Are you sure you want to delete this patient record?\n\nThis action cannot be undone.")) {
     try {
       await patientDB.deletePatient(id);
       alert("Record deleted successfully!");
