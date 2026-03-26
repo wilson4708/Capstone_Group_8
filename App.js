@@ -488,10 +488,22 @@ async function downloadPatientPDF(id) {
       ? patient.pdfBlob
       : new Blob([patient.pdfBlob], { type: "application/pdf" });
 
+    const filename = patient.pdfFilename || `Patient_${patient.id}_${patient.name.replace(/\s+/g, "_")}_Report.pdf`;
+    const pdfFile = new File([blob], filename, { type: "application/pdf" });
+
+    if (navigator.canShare && navigator.canShare({ files: [pdfFile] })) {
+      try {
+        await navigator.share({ files: [pdfFile], title: filename });
+      } catch (e) {
+        if (e.name !== "AbortError") console.warn("Share failed:", e);
+      }
+      return;
+    }
+
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
     a.href = url;
-    a.download = patient.pdfFilename || `Patient_${patient.id}_${patient.name.replace(/\s+/g, "_")}_Report.pdf`;
+    a.download = filename;
     document.body.appendChild(a);
     a.click();
     document.body.removeChild(a);
