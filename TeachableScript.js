@@ -178,12 +178,23 @@ async function loop() {
   if (!useUploadedImage && webcam) {
     webcam.update();
     window.requestAnimationFrame(loop);
+  }
+}
 
-    const now = Date.now();
-    if (now - lastUpdate >= CONFIG.UPDATE_INTERVAL) {
-      await predict();
-      lastUpdate = now;
-    }
+/**
+ * Captures the current webcam frame and runs a single prediction.
+ * Wired to the Take Photo button.
+ */
+async function captureAndPredict() {
+  const btn = document.getElementById("TakePhotoBtn");
+  if (btn) {
+    btn.disabled = true;
+    btn.textContent = "Analyzing...";
+  }
+  await predict();
+  if (btn) {
+    btn.disabled = false;
+    btn.textContent = "Take Photo";
   }
 }
 

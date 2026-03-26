@@ -18,6 +18,7 @@ const backBtn = document.getElementById("back-btn");
 const textElement = document.getElementById("text");
 const patientForm = document.getElementById("patient-form");
 const patientFormContainer = document.getElementById("patient-form-container");
+const takePhotoBtn = document.getElementById("TakePhotoBtn");
 const viewRecordsBtn = document.getElementById("view-records-btn");
 const recordsmodel = document.getElementById("records-model");
 const closemodel = document.querySelector(".close");
@@ -311,6 +312,11 @@ StartCamBtn.addEventListener("click", async () => {
     backBtn.style.display = "block";
     textElement.style.display = "block";
     patientFormContainer.style.display = "none";
+
+    // Show Take Photo button only for webcam mode (not uploaded image)
+    if (!window.uploadedImageData) {
+      takePhotoBtn.style.display = "inline-block";
+    }
   } catch (error) {
     console.error("Failed to start camera:", error);
     alert(
@@ -321,6 +327,8 @@ StartCamBtn.addEventListener("click", async () => {
     StartCamBtn.textContent = "Start Camera Feed";
   }
 });
+
+takePhotoBtn.addEventListener("click", captureAndPredict);
 
 // ========== Back Button Handler ==========
 
@@ -369,6 +377,7 @@ backBtn.addEventListener("click", () => {
   StartCamBtn.style.display = "block";
   StartCamBtn.disabled = false;
   StartCamBtn.textContent = "Start Camera Feed";
+  takePhotoBtn.style.display = "none";
   PDFbtn.style.display = "none";
   backBtn.style.display = "none";
   textElement.style.display = "none";
