@@ -143,6 +143,8 @@ h4 {
 
 #PDFbtn,
 #StartCamBtn,
+#TakePhotoBtn,
+#FlipCamBtn,
 #view-records-btn,
 #back-btn {
   padding: 10px 0;
@@ -161,6 +163,8 @@ h4 {
 
 #PDFbtn:hover,
 #StartCamBtn:hover,
+#TakePhotoBtn:hover,
+#FlipCamBtn:hover,
 #view-records-btn:hover,
 #back-btn:hover {
   background: #333;
@@ -475,6 +479,8 @@ h4 {
 
   #PDFbtn,
   #StartCamBtn,
+  #TakePhotoBtn,
+  #FlipCamBtn,
   #view-records-btn,
   #back-btn {
     width: 180px;

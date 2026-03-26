@@ -116,13 +116,19 @@ async function startWebcam() {
 
   // Stop and remove any existing stream/canvas
   if (webcam && webcam._videoEl) {
-    webcam._videoEl.srcObject.getTracks().forEach((t) => t.stop());
+    const oldStream = webcam._videoEl.srcObject;
+    if (oldStream) oldStream.getTracks().forEach((t) => t.stop());
     webcam._videoEl.remove();
   }
   container.innerHTML = "";
 
+  // iOS Safari requires { exact: "environment" } to reliably switch to the back camera.
+  // Using a plain string like "environment" is often ignored on iOS.
+  const facingConstraint =
+    currentFacingMode === "environment" ? { exact: "environment" } : "user";
+
   const stream = await navigator.mediaDevices.getUserMedia({
-    video: { facingMode: currentFacingMode },
+    video: { facingMode: facingConstraint },
     audio: false,
   });
 
