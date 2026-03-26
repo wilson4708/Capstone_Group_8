@@ -14,7 +14,7 @@
  * Generates a PDF report with patient scan results
  * @returns {Object} {filename, pdfBlob} - Generated filename and blob for database storage
  */
-async function exportToPDF(pdfWindow) {
+async function exportToPDF() {
   const { jsPDF } = window.jspdf;
   const pdf = new jsPDF({ orientation: "portrait", unit: "pt", format: "a4" });
   const w = pdf.internal.pageSize.getWidth();
@@ -36,7 +36,7 @@ async function exportToPDF(pdfWindow) {
   y += 16;
 
   // ========== Snapshot Section ==========
-  const imgData = await getSnapshotDataURL();
+  const imgData = getSnapshotDataURL();
   if (imgData) {
     // Load image and calculate size to fit page while maintaining aspect ratio
     const img = new Image();
@@ -99,10 +99,11 @@ async function exportToPDF(pdfWindow) {
 
   const url = URL.createObjectURL(pdfBlob);
 
-  if (pdfWindow && !pdfWindow.closed) {
-    // Mobile (iOS Safari): navigate the pre-opened window to the blob URL.
-    // The window was opened synchronously before any awaits so iOS allows it.
-    pdfWindow.location.href = url;
+  const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
+  if (isMobile) {
+    // Mobile: navigate the current tab to the blob URL so the PDF loads immediately.
+    // The user can tap Back to return to the scanner.
+    window.location.href = url;
   } else {
     // Desktop: trigger a direct download.
     const a = document.createElement("a");
