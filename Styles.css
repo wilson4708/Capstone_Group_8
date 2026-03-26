@@ -211,9 +211,9 @@ h4 {
 
 #webcam-container canvas,
 #webcam-container img {
-  width: 600px;
-  height: 450px;
-  object-fit: cover;
+  width: 100%;
+  max-width: 600px;
+  height: auto;
   border: 4px solid #fff;
   border-radius: 20px;
   display: block;
@@ -511,14 +511,8 @@ h4 {
   }
 
   /* Responsive webcam container for mobile */
-  #webcam-container {
-    min-height: 300px;
-  }
-
   #webcam-container canvas,
   #webcam-container img {
-    width: 100%;
-    height: auto;
-    aspect-ratio: 4 / 3;
+    max-width: 100%;
   }
 }

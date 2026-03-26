@@ -138,9 +138,16 @@ async function startWebcam() {
   video.muted = true;
   await video.play();
 
+  // Wait for the browser to know the stream's real dimensions
+  await new Promise((resolve) => {
+    if (video.readyState >= 1) resolve();
+    else video.addEventListener("loadedmetadata", resolve, { once: true });
+  });
+
   const canvas = document.createElement("canvas");
-  canvas.width = 400;
-  canvas.height = 400;
+  // Use the stream's actual dimensions so drawImage never squishes the frame
+  canvas.width = video.videoWidth || 640;
+  canvas.height = video.videoHeight || 480;
   // Mirror front camera so it looks natural; back camera should not be mirrored
   canvas.style.transform = currentFacingMode === "user" ? "scaleX(-1)" : "";
   container.appendChild(canvas);
